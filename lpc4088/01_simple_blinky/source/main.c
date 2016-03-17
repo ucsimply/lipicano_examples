@@ -18,12 +18,12 @@ int main (void)
 
         /* toggle LEDs */
         if (first) {
-            LPC_GPIO[1].SET |= (1 << 2);
-            LPC_GPIO[1].CLR |= (1 << 3);
+            LPC_GPIO[1].SET = (1 << 2);
+            LPC_GPIO[1].CLR = (1 << 3);
         }
         else {
-            LPC_GPIO[1].CLR |= (1 << 2);
-            LPC_GPIO[1].SET |= (1 << 3);
+            LPC_GPIO[1].CLR = (1 << 2);
+            LPC_GPIO[1].SET = (1 << 3);
         }
         first = ~first;
 
