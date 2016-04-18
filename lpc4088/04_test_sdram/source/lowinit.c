@@ -4,6 +4,8 @@
  */
 
 #include "chip.h"
+#include "uart.h"
+#include "sdram.h"
 
 void lowinit(void);
 
@@ -14,6 +16,8 @@ void lowinit(void)
 {
     clk_init();
     iopin_init();
+    uart_init();
+    sdram_init();
 }
 
 /*

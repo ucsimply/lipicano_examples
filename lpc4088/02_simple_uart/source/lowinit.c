@@ -101,6 +101,7 @@ static void iopin_init(void)
     LPC_SYSCTL->RSTCON[1] = 0;
      */
 
+    /* using P1.2, P1.3 for driving LEDs on Lipicano */
     /* set pin function */
     LPC_IOCON->p[1][2] = (IOCON_FUNC0 | IOCON_MODE_INACT);
     LPC_IOCON->p[1][3] = (IOCON_FUNC0 | IOCON_MODE_INACT);
