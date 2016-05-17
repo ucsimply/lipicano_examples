@@ -27,6 +27,8 @@ int main (void)
 
     /* initialize xprintf xfunc_out() function pointer */
     xfunc_out = uart_writec;
+
+    eth_display_phy_regs();
     xprintf("\n%s\n", "Waiting for ethernet packets ...\n");
 
     timer_start();

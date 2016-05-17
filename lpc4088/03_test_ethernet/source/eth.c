@@ -7,12 +7,12 @@
 #include <string.h>
 #include "chip.h"
 #include "eth.h"
+#include "xprintf.h"
 
 /* locally administered MAC address */
 #define MACADDR_12  0x0210
 #define MACADDR_34  0x2030
 #define MACADDR_56  0x4050
-
 
 /* use peripheral SRAM for descriptors, status arrays and buffers */
 #define PRPH_SRAM_BASE  (0x20000000UL)
@@ -39,10 +39,20 @@ static ENET_TXSTAT_T *ptx_stats = (ENET_TXSTAT_T *) TX_STAT_BASE;
 static int32_t rx_cons_idx;
 static int32_t tx_prod_idx;
 
+static uint32_t phy_addr;
+
+static const char *reg_name[] = {
+    "Control",
+    "Status",
+    "PHY_ID1",
+    "PHY_ID2"
+};
+
+static void phy_reset(void);
 static void pinmux_init(void);
 static void ethmac_init(void);
 static void phy_init(void);
-static int phy_read(int reg);
+static int phy_read (uint8_t reg, uint16_t *data);
 static void phy_write(int reg, int value);
 static void macaddr_set(void);
 static void descripts_init(void);
@@ -50,6 +60,7 @@ static void mem_clear(void *addr, size_t size);
 
 void eth_init(void)
 {
+    phy_reset();
     pinmux_init();
     ethmac_init();
     phy_init();
@@ -61,6 +72,33 @@ void eth_init(void)
     LPC_ETHERNET->CONTROL.COMMAND |= ENET_COMMAND_RXENABLE;
     LPC_ETHERNET->MAC.MAC1 |= ENET_MAC1_RXENABLE;
 
+}
+
+void eth_display_phy_regs(void)
+{
+    uint8_t reg;
+    uint32_t addr;
+    uint16_t data;
+
+    xprintf("\nEthernet PHY regs:\n");
+    /*
+    for (reg = 0; reg < 20; reg++)
+        phy_read(0, &data);
+    */
+    for (addr = 0; addr < 32; addr++) {
+        xprintf("Addr: %2d", addr);
+        phy_addr = ENET_MADR_PHYADDR(addr);
+        for (reg = 0; reg < 4; reg ++) {
+            xprintf(", %s: ", reg_name[reg]);
+            if (phy_read(reg, &data)) {
+                xprintf("0x%04X", data);
+            }
+            else {
+                xprintf("error");
+            }
+        }
+        xprintf("\n");
+    }
 }
 
 int eth_packet_get(void **pbuff)
@@ -114,6 +152,16 @@ void eth_inc_rxidx(void)
         rx_cons_idx = 0;
     }
     LPC_ETHERNET->CONTROL.RX.CONSUMEINDEX = rx_cons_idx;
+}
+
+void phy_reset(void)
+{
+    volatile int i;
+
+    LPC_GPIO[0].CLR = (1 << 4);
+    for (i = 0; i < 10000; i ++);
+    LPC_GPIO[0].SET = (1 << 4);
+    for (i = 0; i < 10000; i ++);
 }
 
 void pinmux_init(void)
@@ -196,13 +244,32 @@ void ethmac_init(void)
 void phy_init(void)
 {
     /* using default hw config */
-    phy_write(0, 0);
-    phy_read(0);
 }
 
-int phy_read(int reg)
+int phy_read (uint8_t reg, uint16_t *data)
 {
-    return 0;
+    volatile int i;
+    int res = 0;
+    int tmout = 250;
+
+    /* Start register read */
+    LPC_ETHERNET->MAC.MADR = phy_addr | ENET_MADR_REGADDR(reg);
+    LPC_ETHERNET->MAC.MCMD = ENET_MCMD_READ;
+
+    /* Wait for unbusy status */
+    while (tmout > 0) {
+        if (!(LPC_ETHERNET->MAC.MIND & ENET_MIND_BUSY)) {
+            tmout = 0;
+             LPC_ETHERNET->MAC.MCMD = 0;
+            *data = LPC_ETHERNET->MAC.MRDD;
+            res = 1;
+        }
+        else {
+            tmout--;
+            for (i = 0; i < 5000; i++);
+        }
+    }
+    return res;
 }
 
 void phy_write(int reg, int value)

@@ -116,5 +116,10 @@ static void iopin_init(void)
     LPC_GPIO[1].SET = (1 << 2);
     LPC_GPIO[1].SET = (1 << 3);
 
+    /* P0.4 - reset for ethernet PHY */
+    LPC_IOCON->p[0][4] = (IOCON_FUNC0 | IOCON_MODE_INACT);
+    LPC_GPIO[0].DIR |= (1 << 4);
+    LPC_GPIO[0].SET = (1 << 4);
+
 }
 
